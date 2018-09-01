@@ -6,7 +6,7 @@ Use at your own risk!
 
 # Usage
 
-## Get image
+## Get and install the image
 
 Clone the repository and build the image:
 ```
@@ -15,6 +15,8 @@ cd react-native-docker
 
 docker build -t react-native .
 ```
+
+## Set up the helper script
 
 This Docker image is most easily used by utilizing the `rn` script available in
 `bin/`. `rn` will take any command you give it and run it within a React Native
@@ -50,7 +52,8 @@ cd MyAwesomeProjet
 
 ## Run project
 
-Connect a physical or virtual android device (see [Caveats](#Caveats)), then:
+Connect a physical or virtual android device (see [Caveats](#caveats) below),
+then:
 
 ```
 rn react-native run-android
@@ -101,9 +104,9 @@ sudo udevadm control --reload-rules
 
 ## Using an emulator
 
-Documentation on creating emulators on the command line is not particularly
-clear, but the following should be enough to create a basic Android Virtual
-Device for basic use.
+Available documentation (official or otherwise) on creating emulators on the
+command line is sparse and not particularly clear, but the following should be
+enough to create an Android Virtual Device for basic use.
 
 First, get the list of built-in device definitions. In our case, we'll be trying
 to create a Nexus 5 emulator, just to demonstrate.

@@ -1,3 +1,5 @@
+# Can't use alpine since it can't run 32-bit binaries, and the SDK doesn't have
+# 64-bit binaries
 FROM ubuntu:18.04
 
 RUN apt-get update

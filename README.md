@@ -157,3 +157,10 @@ via `CTRL-M`.
 
 Once enabled on the device, navigate to `localhost:8081/debugger-ui`. Requires
 `run-android` to be running.
+
+# Customizing the image
+
+The Dockerfile accepts a number of build-time arguments that can be used to
+customize how it functions, such as the SDK tools version, or the UID of the
+user it will run under. Please examine the various `ARG` directives in the
+Dockerfile for more information.

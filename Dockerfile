@@ -14,17 +14,24 @@ ENV JAVA_HOME $JAVA8_HOME
 ENV ANDROID_HOME /opt/android-sdk-linux
 ARG VERSION_SDK_TOOLS=4333796
 ENV ANDROID_SDK_ZIP http://dl.google.com/android/repository/sdk-tools-linux-$VERSION_SDK_TOOLS.zip
-
 RUN mkdir -p $ANDROID_HOME \
 && curl -L $ANDROID_SDK_ZIP --output sdk.zip \
 && unzip sdk.zip -d $ANDROID_HOME \
 && rm sdk.zip
 
 ENV PATH $PATH:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
+# NVM TOOLS
+ARG NVM_INSTALL_LINK=https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh
+ENV NVM_INSTALL_SCRIPT $NVM_INSTALL_LINK
+
+ARG NVM_NODE_V=12.13.0
+ENV NVM_NODE_VERSION $NVM_NODE_V
 ## SDK
 ### sdkmanager will throw up warnings if this file does not exist
 ### TODO find out what this is needed for
-RUN mkdir -p /root/.android && touch /root/.android/repositories.cfg
+RUN mkdir -p /root/.android && touch /root/.android/repositories.cfg \
+# Add dirs for home
+&& mkdir -p /home/.nvm
 ### Use verbose flags to keep an eye on progress - some commands take a very long
 ### time, and without the verbose flag it's impossible to tell if it's hung or
 ### still working
@@ -36,6 +43,7 @@ RUN yes | sdkmanager --verbose 'extras;google;m2repository'
 RUN yes | sdkmanager --verbose 'build-tools;23.0.1'
 RUN yes | sdkmanager --verbose 'platforms;android-23'
 RUN yes | sdkmanager --verbose 'system-images;android-23;default;x86_64'
+RUN yes | sdkmanager --verbose 'system-images;android-25;google_apis;arm64-v8a'
 
 RUN yes | sdkmanager --update --verbose
 RUN yes | sdkmanager --licenses
@@ -43,10 +51,18 @@ RUN yes | sdkmanager --licenses
 
 # Set up React Native
 ## Install node, yarn, and react-native-cli
-RUN apt-get install -y nodejs npm \
+#### Declare and put nvm into path
+ENV NVM_DIR /home/.nvm
+
+RUN curl -o- ${NVM_INSTALL_SCRIPT} | bash \
+&& [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" \
+&& [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" \
+&& nvm install ${NVM_NODE_VERSION} \
 && npm install -g yarn \
+&& npm install -g expo-cli \
 && yarn global add react-native-cli
 ### This is the port that the React Native app will use to communicate with the
+
 ### build server for loading new builds, and also where the debugger page will
 ### be hosted (ie. localhost:8081/debugger-ui)
 EXPOSE 8081
@@ -83,6 +99,9 @@ RUN chown -R $USERNAME:$USERNAME $ANDROID_HOME
 # Allow the Docker user to play audio through the host's pulseaudio
 ENV XDG_RUNTIME_DIR /run/user/$UID
 RUN mkdir -p $XDG_RUNTIME_DIR && chown -R $USERNAME:$USERNAME $XDG_RUNTIME_DIR
+
+# Post install clean
+RUN rm -rf /var/lib/apt/lists/*
 ## No need for root from here on out, so switch to the non-root user to avoid
 ## complication (eg. having to chown more files due to creating as root, etc.)
 USER $USERNAME
@@ -94,7 +113,14 @@ RUN mkdir $USER_BIN_DIR \
 && echo '(cd "$ANDROID_HOME"/tools && ./emulator "$@")' \
   >> $USER_BIN_DIR/emulator \
 && chmod +x $USER_BIN_DIR/emulator
-ENV PATH $USER_BIN_DIR:$PATH
+# && curl -o- ${NVM_INSTALL_SCRIPT} | bash \
+# && nvm install ${NVM_NODE_VERSION}
+
+#Post-Install clean
+# RUN rm -rf /var/lib/apt/lists/*
+
+
+ENV PATH $USER_BIN_DIR:$NVM_DIR/versions/node/v$NVM_NODE_VERSION/bin:$PATH
 # Done setting up non-root user
 
 ENV PROJECT_MOUNT=/project
@@ -103,3 +129,5 @@ WORKDIR $PROJECT_MOUNT
 # this persists the dependencies between builds, speeding up build times. Make
 # sure to add android/gradle_deps to the project's .gitignore
 ENV GRADLE_USER_HOME $PROJECT_MOUNT/android/gradle_deps
+
+RUN echo no | avdmanager create avd --force --name A6 --package "system-images;android-25;google_apis;arm64-v8a"
